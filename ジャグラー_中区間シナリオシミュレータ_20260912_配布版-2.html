@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ジャグラー 中区間シナリオ・シミュレータ 20260912 配布版</title>
+<style>
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:#f6f7f9;color:#111}
+.wrap{max-width:1300px;margin:0 auto;padding:18px}
+.card{background:#fff;border:1px solid #ddd;border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px}
+label{display:block;font-weight:700;font-size:14px}
+input,select,button{width:100%;box-sizing:border-box;margin-top:6px;padding:10px;border-radius:9px;border:1px solid #bbb;font-size:16px}
+button{font-weight:800;cursor:pointer}
+.small{font-size:12px;color:#666}.big{font-size:20px;font-weight:800;margin-top:4px}
+.note{line-height:1.7}.scroll{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #e5e5e5;padding:7px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+canvas{width:100%;height:360px;border:1px solid #ddd;border-radius:10px;background:#fff}
+.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#eee;font-size:12px}
+</style>
+
+<style>
+th{position:sticky;top:0;background:#fff;z-index:1}
+td.mode-repeat{color:#777;text-align:center;font-weight:700}
+.badge-big{display:inline-block;padding:2px 7px;border-radius:999px;background:#eef3ff;font-weight:800}
+.badge-reg{display:inline-block;padding:2px 7px;border-radius:999px;background:#fff1f1;font-weight:800}
+.badge-morning{display:inline-block;padding:2px 7px;border-radius:999px;background:#fff7d6;font-weight:700}
+.badge-special{display:inline-block;padding:2px 7px;border-radius:999px;background:#eef8ee;font-weight:700}
+</style>
+
+</head>
+<body><div class="wrap">
+
+
+<div class="card">
+  <h3>はじめに</h3>
+  <div class="small note">
+    機種・設定・ゲーム数を選び、「シミュレーション実行」を押してください。
+    BIG・REG・合算・ブドウ・差枚グラフに加え、中区間、BR比率モード、
+    優遇／冷遇、リセット区間などを確認できます。<br>
+    本シミュレータは実データの特徴を分析するための仮説モデルです。
+    実機の内部仕様・設定・出玉を保証または断定するものではありません。
+  </div>
+</div>
+
+<div class="card">
+<h2>ジャグラーシミュレータ<br>中区間シナリオ管理型20260912 配布版</h2>
+<div class="small note">
+20260911-4調整：20260911-3の構造を維持し、リセット中区間のプラス系目標差枚だけを100〜200枚下方調整。強プラスは−200枚、プラスは−150枚、微プラスは−100枚とし、朝の上振れは残しつつ最高レンジを少し抑えています。
+</div>
+<div class="grid" style="margin-top:12px">
+<label>機種<select id="machine">
+<option value="im">アイムジャグラーEX</option>
+<option value="funky">ファンキージャグラー2</option>
+<option value="gogo">ゴーゴージャグラー3</option>
+<option value="girls" selected>ジャグラーガールズSS</option>
+</select></label>
+<label>設定<select id="setting"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
+<label>試行ゲーム数<input id="games" type="number" value="8000" min="1000" max="65536" step="250"></label>
+<label>試行セット数<input id="sets" type="number" value="100" min="1" max="500"></label>
+</div>
+<p><button id="run">シミュレーション実行</button></p>
+</div>
+
+<div class="card">
+<h3>公表値</h3>
+<div class="kpis">
+<div class="kpi"><div class="small">公表BIG</div><div id="pubBB" class="big">-</div></div>
+<div class="kpi"><div class="small">公表REG</div><div id="pubRB" class="big">-</div></div>
+<div class="kpi"><div class="small">公表合算</div><div id="pubComb" class="big">-</div></div>
+<div class="kpi"><div class="small">公表機械割</div><div id="pubRtp" class="big">-</div></div>
+<div class="kpi"><div class="small">期待差枚数</div><div id="expectedCoins" class="big">-</div></div>
+<div class="kpi"><div class="small">ブドウ理論値</div><div id="pubGrape" class="big">-</div></div>
+</div>
+</div>
+
+<div class="card">
+<h3>シミュレーション平均（全セット集計）</h3>
+<div class="kpis">
+<div class="kpi"><div class="small">平均BIG出現率</div><div id="avgBB" class="big">-</div></div>
+<div class="kpi"><div class="small">平均REG出現率</div><div id="avgRB" class="big">-</div></div>
+<div class="kpi"><div class="small">平均合算</div><div id="avgComb" class="big">-</div></div>
+<div class="kpi"><div class="small">平均機械割</div><div id="avgRtp" class="big">-</div></div>
+<div class="kpi"><div class="small">平均差枚数</div><div id="avgCoins" class="big">-</div></div>
+<div class="kpi"><div class="small">平均中区間数</div><div id="avgMacroCount" class="big">-</div></div>
+<div class="kpi"><div class="small">ブドウ出現率</div><div id="avgGrape" class="big">-</div></div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+<div class="card">
+<div class="grid">
+<label>表示セット<select id="view"></select></label>
+<div><span id="graphCheck" class="tag">整合確認</span><div id="graphInfo" class="small" style="margin-top:8px"></div></div>
+</div>
+<canvas id="chart" width="1120" height="360"></canvas>
+</div><div class="card"><h3>表示セット結果</h3>
+<div class="kpis">
+<div class="kpi"><div class="small">BIG回数</div><div id="sBB" class="big">-</div></div>
+<div class="kpi"><div class="small">REG回数</div><div id="sRB" class="big">-</div></div>
+<div class="kpi"><div class="small">合算</div><div id="sComb" class="big">-</div></div>
+<div class="kpi"><div class="small">65535Gボーナスプール</div><div id="sPool" class="big">-</div></div>
+<div class="kpi"><div class="small">当日モード開始</div><div id="sResetInit" class="big">リセット</div></div>
+<div class="kpi"><div class="small">BIG配置残高</div><div id="sBBBalance" class="big">-</div></div>
+<div class="kpi"><div class="small">REG配置残高</div><div id="sRBBalance" class="big">-</div></div>
+<div class="kpi"><div class="small">差枚</div><div id="sCoins" class="big">-</div></div>
+<div class="kpi"><div class="small">機械割</div><div id="sRtp" class="big">-</div></div>
+<div class="kpi"><div class="small">ブドウ出現率</div><div id="sGrape" class="big">-</div></div>
+<div class="kpi"><div class="small">ブドウ理論値比</div><div id="sGrapeRatio" class="big">-</div></div>
+<div class="kpi"><div class="small">リセット設定差ボーナス</div><div id="sMorningSpec" class="big">-</div></div>
+<div class="kpi"><div class="small">リセット最高差枚</div><div id="sResetPeak" class="big">-</div></div>
+<div class="kpi"><div class="small">特殊G目標倍率</div><div id="sSpecialMult" class="big">-</div></div>
+<div class="kpi"><div class="small">一桁 実測/理論/理論値比</div><div id="sOneRate" class="big">-</div></div>
+<div class="kpi"><div class="small">ゾロ目 実測/理論/理論値比</div><div id="sZZRate" class="big">-</div></div>
+</div></div><div class="card">
+<h3>ボーナス出現履歴（ペカ履歴）</h3>
+<div class="scroll"><table id="bonusTable"></table></div>
+</div><div class="card">
+<h3>中区間履歴</h3>
+<div class="scroll"><table id="macroTable"></table></div>
+</div><div class="card">
+<h3>全セット差枚数分布</h3>
+<div class="scroll"><table id="distTable"></table></div>
+</div><div class="grid">
+<div class="card"><h3>最大差枚セット</h3><div id="maxSet" class="kpis"></div></div>
+<div class="card"><h3>最低差枚セット</h3><div id="minSet" class="kpis"></div></div>
+</div><div class="card">
+<h3>リセットモード 中区間選択率</h3>
+<div class="scroll"><table id="morningRate"></table></div>
+<div class="small">「微プラス以上」＝強プラス＋プラス＋微プラス。朝イチ1回目終了後は通常の設定別中区間選択率へ戻ります。</div>
+</div><div class="card">
+<h3>朝イチ BR比率モード選択率</h3>
+<div class="scroll"><table id="typeRate"></table></div>
+<div class="small">設定差を直接強く出さず、朝イチはRB先行（R型・BR型）を増加。総BON数ではなくBIG/REG構成を変えます。</div>
+</div><div class="card">
+<h3>リセットモード終了後 専用移行テーブル</h3>
+<div class="small note">リセット区間の実差枚で判定し、次の1中区間だけ専用テーブルを使用します。+800枚以上＝上振れ後、-500〜+799枚＝中立後、-500枚未満＝不発後。その次から通常中区間へ戻ります。</div>
+<div class="scroll"><table id="postResetRate"></table></div>
+</div>
+
+<div class="card">
+<h3>通常時 中区間基本選択率</h3>
+<div class="scroll"><table id="normalRate"></table></div>
+</div><div class="card">
+<h3>マイナス差枚レンジ 盛り返し設定</h3>
+<div class="small note">−1000枚以下から250枚刻みでレンジ判定。中区間開始時に盛り返しトリガーを抽選し、現在のマイナス幅の60%・80%・100%・120%を目標とする中区間へ移行します。</div>
+<div class="scroll"><table id="reboundRateTable"></table></div>
+</div>
+
+<div class="card">
+<h3>ブドウ モード連動設定</h3>
+<div class="small note">ブドウ理論値は今回確認した機種別設定値を基準として上段に表示。シミュレーション内のブドウは機種×設定ごとの校正基準値に加え、ボーナスモードとは別抽選のブドウモードで変動します。両者は部分的に相関しますが完全連動ではありません。設定1〜3は固定し、設定4〜6だけ公表機械割との乖離をブドウ基準値で最終校正。下表は通常中区間の目安で、リセット区間は各値より約0.08だけ良化します。</div>
+<div class="scroll"><table id="grapeModeTable"></table></div>
+</div>
+
+<div class="card"><h3>BIG/REG 配置残高</h3><div class="small note">リセットで理論ペースより前倒ししたBIG/REGを残高として記録し、後続中区間では残高が大きいほど同ボーナスの配置率を抑えて自然に返済します。日末に強制的に0へ戻さないため、日単位のブレは維持されます。</div></div>
+
+<div class="card">
+<h3>仕様</h3>
+<div class="small note">
+<strong>上位：</strong>1,000〜3,000Gの中区間シナリオ（強プラス／プラス／微プラス／均衡／微マイナス／マイナス）を選択。<br>
+<strong>朝イチ：</strong>1回目の中区間のみ専用選択率を使用。ガールズは微プラス以上65%固定で、設定差は主に内訳と目標差枚レンジに反映。<br>
+<strong>リセット：</strong>中区間の一種として「リセット」を持つ。リセット中区間では専用の中区間選択率・BR比率モード・設定差ボーナス比率・目標差枚レンジを使用。<br>
+<strong>プラス系区間長：</strong>通常時の強プラス・プラス・微プラスは設定依存。設定1〜3ほど短く、設定4〜6ほど長く継続しやすい。均衡・微マイナス・マイナスは1000〜3000Gを維持。リセットも1000〜3000Gを維持。<br>
+<strong>65,535G長期プール：</strong>ランダム位置はBIG/REG残在庫の決定専用。モード状態は引き継がず当日0Gは必ずリセット開始。さらにBIG/REGそれぞれに前借り・返済残高を持ち、リセットでREGを前倒しした分は後続区間でREG配置率を自然に抑える。8,000G終盤の強制帳尻合わせは行わない。<br>
+<strong>基準値更新：</strong>BIG・REG・合算・ブドウの基準値を、今回確認した4機種の設定別数値へ全面更新。ボーナス総量プールはこのBIG/REG確率を基準に生成し、ブドウモードは各設定のブドウ基準値を中心に上下する。<br>
+<strong>ブドウ最終校正：</strong>設定1〜3は固定。設定4〜6のみ機種別ブドウ基準値を微調整し、公表機械割との差を吸収。中区間選択率・リセット・盛り返し・一桁/ゾロ目配置は変更しない。<br>
+<strong>ブドウ優遇・冷遇：</strong>ブドウは8000G固定ではなく250G単位の内部ブロックごとに別モードを抽選。ボーナスモードとは部分相関に留め、強優遇〜強冷遇まで振れ幅を拡大。平均機械割は機種×設定の基準値で校正する。<br>
+<strong>設定1〜3の甘さ補正：</strong>リセット仕様は維持し、通常中区間のプラス系選択率、マイナス域の盛り返しトリガー率、100〜120%戻し選択率だけを弱めて平均機械割を調整。<br>
+<strong>マイナス差枚レンジ：</strong>−1000枚以下は250枚刻みで状態管理し、中区間開始時に盛り返しトリガーを抽選。盛り返し目標は現在マイナス幅の60%／80%／100%／120%。高設定ほど100〜120%戻し、低設定ほど60〜80%戻しの選択率が高い。設定差は区間選択率にのみ反映。<br>
+<strong>リセット最高レンジ：</strong>設定1〜3はリセット中区間の最高差枚を記憶。+800〜1199枚、+1200〜1799枚、+1800枚以上で下山方向の強さを段階化し、最大2中区間まで継続判定。総ボーナス出現率を直接減らさず、中区間による配置の偏りとして表現。<br>
+<strong>リセット後移行：</strong>リセット区間終了差枚を上振れ／中立／不発の3状態に分類し、次の1中区間だけ専用移行テーブルで抽選。上振れ後は低設定ほど均衡・微マイナス・マイナスへ、不発後はプラス系へ戻る余地を増やす。その後は通常テーブルへ移行。<br>
+<strong>BR比率モード：</strong>B型／BR型／R型。朝イチはR型を高め、ガールズ48%、ゴーゴー44%、ファンキー42%、アイム39%。<br>
+<strong>設定差BON：</strong>朝イチは総BON数を直接増やさず、出現したRB等の内訳を設定差ボーナス側へ寄せる仮想処理。<br>
+<strong>目標差枚：</strong>同じプラス系中区間でも設定が高いほど目標レンジ上限が高い。<br>
+<strong>特殊ゲーム数：</strong>中区間→優遇/冷遇→ボーナス出現の順序は固定。設定4〜6は一桁・ゾロ目の自然発生を抑制せず、不足時だけ強制一桁／強制ゾロ目を追加。設定1〜2のみ一桁抑制／ゾロ目抑制あり。目標倍率は設定1=0.75、2=0.95、3=1.15、4=1.35、5=1.55、6=1.75。強制処理は最強優遇／強優遇／優遇ほど強い。<br>
+<strong>機械割補正：</strong>朝イチ終了後、公表機械割期待線との乖離と累計差枚に応じて次の中区間選択率を調整。<br>
+<strong>グラフ：</strong>1G単位の差枚ログを唯一の元データとし、表示差枚・ボーナス履歴・グラフ終点を一致させる。<br>
+<strong>表示：</strong>ボーナス表記はBIG/REGに統一。ペカ履歴では同一の優遇/冷遇モードが継続している間だけ「〃」表示し、同名モードへ再移行した場合はモード名を再表示。朝イチ・特殊配置・BIG/REGを視覚的に判別しやすくしています。
+</div>
+</div>
+<script>
+const M={
+girls:{name:'ジャグラーガールズSS',
+ bb:[273.07,270.81,260.06,250.14,243.63,225.99],
+ rb:[381.02,350.46,316.60,281.27,270.81,252.06],
+ rtp:[97.0,97.9,99.9,102.1,104.0,107.5]},
+gogo:{name:'ゴーゴージャグラー3',
+ bb:[259.04,258.02,257.00,254.02,247.31,234.90],
+ rb:[354.25,332.67,306.24,268.59,247.31,234.90],
+ rtp:[97.2,98.2,99.4,101.6,103.8,106.5]},
+funky:{name:'ファンキージャグラー2',
+ bb:[266.41,259.04,256.00,249.19,240.06,219.92],
+ rb:[439.84,407.06,366.12,322.84,299.25,262.14],
+ rtp:[97.0,98.5,99.8,102.0,104.3,109.0]},
+im:{name:'ネオアイムジャグラーEX',
+ bb:[273.1,269.7,269.7,259.0,259.0,255.0],
+ rb:[439.8,399.6,331.0,315.1,255.0,255.0],
+ rtp:[97.0,98.0,99.5,101.1,103.3,105.5]}
+};
+
+const macroNames=['強プラス','プラス','微プラス','均衡','微マイナス','マイナス'];
+// マイナス差枚レンジ・盛り返しトリガー
+const reboundTriggerBySetting={1:.14,2:.19,3:.24,4:.52,5:.60,6:.68};
+const reboundRatioWeights={
+ 1:[.70,.23,.06,.01],2:[.60,.28,.10,.02],3:[.50,.32,.14,.04],
+ 4:[.23,.35,.27,.15],5:[.16,.30,.32,.22],6:[.10,.24,.36,.30]
+};
+const reboundRatios=[.60,.80,1.00,1.20];
+function negativeBand(coins){
+ if(coins>-1000)return null;
+ return Math.floor((-coins-1000)/250)*250+1000;
+}
+function reboundTriggerProb(c,coins){
+ const band=negativeBand(coins);
+ if(band===null)return 0;
+ const stepExtra=Math.max(0,(band-1000)/250)*(c.s<=3?.010:.015);
+ const extra=Math.min(c.s<=3?.12:.18,stepExtra);
+ return clamp((reboundTriggerBySetting[c.s]||.34)+extra,0,.90);
+}
+function chooseReboundRatio(c){return reboundRatios[pick(reboundRatioWeights[c.s])]}
+function reboundMicroIndex(ratio){
+ if(ratio>=1.10)return 0;
+ if(ratio>=.90)return 1;
+ return 2;
+}
+
+const micro=[
+{name:'最強優遇',den:50},{name:'強優遇',den:90},{name:'優遇',den:125},
+{name:'通常',den:175},{name:'冷遇',den:225},{name:'超冷遇',den:275},{name:'ミミズ',den:150}
+];
+
+// 通常時（V3系）
+const normal={
+girls:{
+1:[.001,.001,.007,.175,.320,.496],
+2:[.001,.003,.020,.230,.330,.416],
+3:[.003,.014,.060,.320,.315,.288],
+4:[.040,.100,.190,.345,.210,.115],
+5:[.118,.198,.228,.275,.125,.056],
+6:[.205,.260,.225,.210,.070,.030]
+},
+gogo:{
+1:[.001,.003,.018,.235,.325,.418],
+2:[.002,.008,.036,.270,.325,.359],
+3:[.006,.028,.078,.330,.315,.243],
+4:[.045,.115,.200,.350,.195,.095],
+5:[.123,.202,.232,.275,.115,.053],
+6:[.195,.255,.230,.225,.065,.030]
+},
+funky:{
+1:[.001,.004,.024,.225,.325,.421],
+2:[.002,.009,.042,.260,.325,.362],
+3:[.008,.032,.088,.320,.310,.242],
+4:[.050,.120,.200,.340,.195,.095],
+5:[.132,.210,.230,.267,.112,.049],
+6:[.225,.275,.225,.190,.060,.025]
+},
+im:{
+1:[.001,.001,.012,.240,.335,.411],
+2:[.001,.004,.022,.280,.335,.358],
+3:[.003,.014,.060,.350,.320,.253],
+4:[.028,.080,.180,.390,.210,.112],
+5:[.095,.176,.238,.310,.128,.053],
+6:[.150,.225,.238,.275,.080,.032]
+}
+};
+
+// 朝イチ専用。ガールズは「微プラス以上65%固定・内訳だけ設定差」。
+const morning={
+girls:{
+1:[.075,.250,.325,.200,.100,.050],2:[.085,.255,.310,.200,.100,.050],3:[.095,.260,.295,.200,.100,.050],
+4:[.105,.265,.280,.200,.100,.050],5:[.115,.270,.265,.200,.100,.050],6:[.125,.275,.250,.200,.100,.050]},
+gogo:{
+1:[.060,.180,.280,.280,.120,.080],2:[.070,.185,.285,.275,.115,.070],3:[.080,.190,.290,.270,.105,.065],
+4:[.090,.200,.290,.260,.100,.060],5:[.100,.210,.290,.250,.095,.055],6:[.110,.220,.290,.240,.090,.050]},
+funky:{
+1:[.060,.130,.190,.340,.170,.110],2:[.070,.140,.195,.335,.160,.100],3:[.080,.150,.200,.330,.150,.090],
+4:[.090,.165,.210,.320,.135,.080],5:[.105,.180,.220,.305,.120,.070],6:[.125,.195,.230,.290,.100,.060]},
+im:{
+1:[.050,.070,.100,.480,.180,.120],2:[.055,.075,.110,.475,.175,.110],3:[.060,.080,.120,.465,.170,.105],
+4:[.070,.090,.130,.450,.165,.095],5:[.080,.105,.145,.425,.155,.090],6:[.100,.125,.165,.390,.140,.080]}
+};
+
+// リセットモード終了後の次1中区間だけ専用の移行テーブル。
+// リセット区間の実差枚で「上振れ / 中立 / 不発」を判定。
+// その次の中区間からは通常テーブルへ戻る。
+const postResetTransition={
+girls:{
+ high:{1:[.005,.020,.075,.300,.325,.275],2:[.008,.030,.090,.305,.310,.257],3:[.015,.045,.120,.310,.290,.220],4:[.035,.090,.170,.320,.235,.150],5:[.070,.150,.210,.300,.175,.095],6:[.115,.210,.245,.250,.120,.060]},
+ neutral:{1:[.010,.035,.105,.295,.300,.255],2:[.015,.045,.120,.300,.290,.230],3:[.025,.065,.145,.305,.270,.190],4:[.050,.110,.190,.315,.215,.120],5:[.090,.170,.225,.285,.150,.080],6:[.145,.235,.250,.220,.100,.050]},
+ low:{1:[.035,.100,.195,.315,.220,.135],2:[.045,.115,.205,.310,.205,.120],3:[.060,.135,.220,.300,.185,.100],4:[.080,.160,.230,.285,.160,.085],5:[.115,.205,.235,.260,.125,.060],6:[.170,.255,.240,.215,.080,.040]}
+},
+gogo:{
+ high:{1:[.004,.016,.060,.315,.330,.275],2:[.007,.025,.080,.320,.320,.248],3:[.015,.045,.115,.320,.295,.210],4:[.035,.090,.175,.325,.230,.145],5:[.070,.145,.215,.305,.170,.095],6:[.110,.200,.245,.260,.125,.060]},
+ neutral:{1:[.008,.030,.095,.310,.310,.247],2:[.012,.042,.115,.315,.300,.216],3:[.025,.065,.145,.320,.270,.175],4:[.050,.115,.190,.315,.210,.120],5:[.090,.170,.225,.290,.150,.075],6:[.140,.225,.250,.230,.105,.050]},
+ low:{1:[.030,.090,.180,.325,.235,.140],2:[.040,.105,.195,.320,.220,.120],3:[.055,.125,.210,.310,.195,.105],4:[.075,.150,.225,.295,.170,.085],5:[.110,.195,.235,.270,.130,.060],6:[.160,.240,.245,.225,.090,.040]}
+},
+funky:{
+ high:{1:[.004,.014,.055,.320,.335,.272],2:[.007,.025,.075,.325,.325,.243],3:[.015,.045,.110,.325,.295,.210],4:[.035,.090,.170,.325,.235,.145],5:[.070,.145,.215,.305,.170,.095],6:[.110,.200,.245,.260,.125,.060]},
+ neutral:{1:[.008,.028,.090,.315,.315,.244],2:[.012,.040,.110,.320,.305,.213],3:[.025,.065,.140,.320,.275,.175],4:[.050,.110,.185,.315,.215,.125],5:[.090,.170,.225,.290,.150,.075],6:[.140,.225,.250,.230,.105,.050]},
+ low:{1:[.028,.085,.175,.330,.240,.142],2:[.038,.100,.190,.325,.225,.122],3:[.052,.120,.205,.315,.200,.108],4:[.072,.145,.220,.300,.175,.088],5:[.108,.190,.232,.275,.133,.062],6:[.158,.238,.242,.230,.092,.040]}
+},
+im:{
+ high:{1:[.002,.008,.035,.390,.335,.230],2:[.003,.012,.045,.395,.330,.215],3:[.006,.020,.065,.400,.315,.194],4:[.015,.045,.100,.400,.280,.160],5:[.035,.080,.150,.390,.225,.120],6:[.070,.135,.195,.360,.160,.080]},
+ neutral:{1:[.004,.015,.050,.400,.325,.206],2:[.006,.020,.060,.405,.320,.189],3:[.010,.030,.080,.405,.305,.170],4:[.020,.055,.115,.400,.270,.140],5:[.045,.095,.160,.380,.210,.110],6:[.085,.150,.205,.340,.145,.075]},
+ low:{1:[.015,.045,.100,.410,.285,.145],2:[.020,.055,.110,.405,.275,.135],3:[.028,.070,.125,.400,.255,.122],4:[.040,.090,.145,.385,.230,.110],5:[.070,.125,.175,.360,.180,.090],6:[.110,.180,.220,.320,.110,.060]}
+}
+};
+
+
+// リセットモード BR比率モード B / BR / R。設定差は付けず機種差中心。
+const morningType={
+girls:{
+ 1:[.16,.29,.55],2:[.15,.29,.56],3:[.14,.29,.57],
+ 4:[.13,.28,.59],5:[.12,.28,.60],6:[.11,.27,.62]
+},
+gogo:{
+ 1:[.18,.30,.52],2:[.17,.30,.53],3:[.16,.30,.54],
+ 4:[.15,.29,.56],5:[.14,.29,.57],6:[.13,.28,.59]
+},
+funky:{
+ 1:[.20,.31,.49],2:[.19,.31,.50],3:[.18,.30,.52],
+ 4:[.17,.30,.53],5:[.16,.29,.55],6:[.15,.29,.56]
+},
+im:{
+ 1:[.22,.34,.44],2:[.20,.33,.47],3:[.17,.31,.52],
+ 4:[.15,.29,.56],5:[.13,.27,.60],6:[.11,.25,.64]
+}
+};
+// 通常時B/BR/Rは設定別BB:RB公表比率から動的算出。
+
+// 中区間内で使うモードウェイト
+const macroMicro=[
+[.24,.30,.24,.12,.04,.02,.04],
+[.12,.26,.30,.18,.06,.03,.05],
+[.06,.18,.30,.30,.07,.03,.06],
+[.03,.10,.22,.38,.10,.05,.12],
+[.02,.07,.18,.33,.22,.09,.09],
+[.01,.04,.11,.24,.32,.18,.10]
+];
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function norm(a){const s=a.reduce((x,y)=>x+y,0)||1;return a.map(v=>v/s)}
+function pick(w){let r=Math.random(),c=0;for(let i=0;i<w.length;i++){c+=w[i];if(r<c)return i}return w.length-1}
+function rnd(a,b){return Math.floor(a+Math.random()*(b-a+1))}
+function cfg(){const key=document.getElementById('machine').value,s=+document.getElementById('setting').value,m=M[key];return{key,s,m,bb:m.bb[s-1],rb:m.rb[s-1],rtp:m.rtp[s-1]}}
+function expected(c,g){return(c.rtp/100-1)*3*g}
+
+// ブドウ解析参考値（メーカー非公表のため解析・実戦ベースの参考理論値）
+const grapeTheory={
+  girls:{1:5.980,2:5.980,3:5.980,4:5.980,5:5.883,6:5.831},
+  gogo:{1:6.287,2:6.210,3:6.176,4:6.074,5:5.995,6:5.910},
+  funky:{1:5.942,2:5.932,3:5.878,4:5.831,5:5.749,6:5.659},
+  im:{1:6.01,2:6.01,3:6.01,4:6.01,5:6.01,6:5.80}
+};
+function grapeTheoryDen(c){
+ return grapeTheory[c.key][c.s];
+}
+
+
+// 同じ中区間名でも設定が高いほど目標差枚レンジが高い
+function targetRange(c,mi,isMorning){
+ const t=(c.s-1)/5;
+ const low=[
+  [700,1100],[300,700],[100,300],[-300,250],[-450,-100],[-950,-500]
+ ];
+ const high=[
+  [1000,1500],[500,1000],[200,500],[-250,300],[-400,-100],[-850,-450]
+ ];
+ let lo=Math.round(low[mi][0]+(high[mi][0]-low[mi][0])*t);
+ let hi=Math.round(low[mi][1]+(high[mi][1]-low[mi][1])*t);
+
+ // リセット中区間のプラス系目標差枚を少し抑える
+ // 強プラス -200枚 / プラス -150枚 / 微プラス -100枚
+ if(isMorning && mi===0){lo-=200;hi-=200}
+ if(isMorning && mi===1){lo-=150;hi-=150}
+ if(isMorning && mi===2){lo-=100;hi-=100}
+
+ // 通常中区間のみプラス系上限を抑える
+ if(!isMorning && mi===0){lo=Math.round(lo*0.95);hi=Math.round(hi*0.90)}
+ if(!isMorning && mi===1){lo=Math.round(lo*0.96);hi=Math.round(hi*0.92)}
+ if(!isMorning && mi===2){lo=Math.round(lo*0.98);hi=Math.round(hi*0.95)}
+
+ // 設定1〜4だけ追加で約5%縮小
+ if(!isMorning && c.s<=4 && mi<=2){
+   lo=Math.round(lo*0.97);
+   hi=Math.round(hi*0.95);
+ }
+
+ return [lo,hi];
+}
+
+function normalMacroW(c,g,coins){
+ let w=normal[c.key][c.s].slice(),gap=coins-expected(c,g),hi=(c.s-1)/5,th=[1200,1350,1500,1650,1800,2000][c.s-1];
+
+ const earlyGap=[50,150,250,500,500,500][c.s-1];
+ if(gap>earlyGap){
+   const lv=Math.min(4,(gap-earlyGap+250)/450);
+   const lowAdj=c.s<=3?1.22:1.00;
+   w[0]*=clamp(1-.11*lv*lowAdj,.16,1);
+   w[1]*=clamp(1-.08*lv*lowAdj,.30,1);
+   w[2]*=clamp(1-.04*lv*lowAdj,.58,1);
+   w[3]*=1+.09*lv;
+   w[4]*=1+.06*lv;
+ }
+ if(gap>800 && c.s<=3){
+   w[0]*=.58;w[1]*=.72;w[2]*=.86;w[3]*=1.18;w[4]*=1.13;
+ } else if(gap>1000){
+   w[0]*=.72;w[1]*=.82;w[3]*=1.12;w[4]*=1.08;
+ }
+
+ if(coins>=th){
+   let lv=Math.floor((coins-th)/1000)+1;
+   w[0]*=clamp(1-.15*lv,.05,1);
+   w[1]*=clamp(1-.10*lv,.18,1);
+   w[2]*=clamp(1-.05*lv,.50,1);
+   w[3]*=1+.10*lv;
+ }
+ if(coins>=5000){w[0]*=.12;w[1]*=.34;w[2]*=.66;w[3]*=1.75}
+ if(coins>=7000){w[0]*=.015;w[1]*=.08;w[2]*=.34;w[3]*=2.70}
+ if(coins<=-1000){w[0]*=1.06+.10*hi;w[1]*=1.06+.08*hi;w[2]*=1.03;w[4]*=.94;w[5]*=.87}
+ if(coins<=-2000){w[0]*=1.10+.13*hi;w[1]*=1.10+.11*hi;w[2]*=1.05;w[4]*=.87;w[5]*=.75}
+ return norm(w);
+}
+function postResetState(delta){
+ if(delta>=800)return 'high';
+ if(delta<-500)return 'low';
+ return 'neutral';
+}
+function resetPeakBand(peak){
+ if(peak>=1800)return '1800+';
+ if(peak>=1200)return '1200-1799';
+ if(peak>=800)return '800-1199';
+ if(peak>=500)return '500-799';
+ return '0-499';
+}
+function peakDownW(c,base,peak,coins,left){
+ let w=base.slice();
+ if(c.s>=4 || peak<800)return w;
+ const band=resetPeakBand(peak);
+ // 設定1〜3のみ。リセットで当日上位レンジを形成した後は、
+ // 次の配置を均衡以下へ寄せる。ボーナス総量そのものは変更しない。
+ const strength={
+   1:{'800-1199':1.00,'1200-1799':1.18,'1800+':1.32},
+   2:{'800-1199':.82,'1200-1799':1.00,'1800+':1.15},
+   3:{'800-1199':.62,'1200-1799':.80,'1800+':.95}
+ }[c.s][band]||0;
+ if(!strength)return w;
+ const continuation=left===1?.72:1;
+ const k=strength*continuation;
+ w[0]*=Math.max(.10,1-.68*k);
+ w[1]*=Math.max(.20,1-.55*k);
+ w[2]*=Math.max(.45,1-.32*k);
+ w[3]*=1+.28*k;
+ w[4]*=1+.48*k;
+ w[5]*=1+.62*k;
+ // すでにピークから大きく下げたら補正を自然減衰
+ if(peak>0 && coins<=peak*.25){
+   w=w.map((v,i)=>v*.55+base[i]*.45);
+ }
+ return norm(w);
+}
+function macroW(c,g,coins,isMorning,isPostReset,resetDelta,resetPeak,peakDownLeft){
+ if(isMorning)return morning[c.key][c.s];
+ if(isPostReset){
+   const base=postResetTransition[c.key][postResetState(resetDelta)][c.s];
+   return peakDownW(c,base,resetPeak,coins,2);
+ }
+ const base=normalMacroW(c,g,coins);
+ if(peakDownLeft>0)return peakDownW(c,base,resetPeak,coins,peakDownLeft);
+ return base;
+}
+
+function normalType(c){
+ const q=(1/c.bb)/((1/c.bb)+(1/c.rb));
+ let br=.34,b=3*(q-1/3)-.5*br,r=1-br-b;
+ return norm([Math.max(.05,b),Math.max(.05,br),Math.max(.05,r)]);
+}
+function typeW(c,isMorning){return isMorning?morningType[c.key][c.s]:normalType(c)}
+
+function bonusShare(c,ti,isMorning){
+ // BR比率モードは「どこでBIG/REGを使うか」の配置バイアスだけを担当。
+ // 8000GトータルのBIG/REG回数は別のボーナスプールで公表値基準に固定する。
+ return [2/3,.5,1/3][ti];
+}
+
+
+function microW(mi,delta,target,progress){
+ let w=macroMicro[mi].slice(),gap=delta-target*progress;
+ if(gap>500){w[0]*=.35;w[1]*=.55;w[2]*=.78;w[3]*=1.25;w[4]*=1.30;w[5]*=1.22;w[6]*=1.55}
+ else if(gap<-500){w[0]*=1.55;w[1]*=1.38;w[2]*=1.17;w[4]*=.74;w[5]*=.56;w[6]*=.78}
+ return norm(w)
+}
+
+// 設定差ボーナス「見せ方」。総BIG/REGは変えない。
+// 朝はRBを「設定差ボーナス」へ寄せる。低設定でも高設定っぽい内訳を作れる。
+function flagLabel(type,isMorning,c){
+ if(type==='BB'){
+   const cherryP=isMorning?.24:.18;
+   return Math.random()<cherryP?'チェリー重複BB':'単独BB';
+ }
+ // RBは朝だけ設定差フラグ比率アップ
+ let singleP=.62, cherryP=.18;
+ if(isMorning){singleP=.76;cherryP=.20}
+ const z=Math.random();
+ if(z<singleP)return '単独RB（設定差）';
+ if(z<singleP+cherryP)return 'チェリー重複RB（設定差）';
+ return 'その他RB';
+}
+
+// 特殊ゲーム数配置
+// 順序：中区間 → 優遇/冷遇モード → ボーナス内部出現 → ペカG調整。
+// 高設定域（設定4〜6）は自然発生の一桁・ゾロ目を抑制しない。
+// 設定1〜2のみ抑制あり、設定3はほぼ中立。
+// 足りない場合の“強制一桁／強制ゾロ目”は優遇以上ほど強く、高設定ほど追加強度を上げる。
+const specialTargetMultiplier={1:.75,2:.95,3:1.15,4:1.35,5:1.55,6:1.75};
+
+function theoreticalSpecialRates(c){
+ const p=(1/c.bb)+(1/c.rb);
+ const one=1-Math.pow(1-p,9);
+ const zz=[11,22,33,44,55,66,77,88,99]
+   .reduce((s,d)=>s+Math.pow(1-p,d-1)*p,0);
+ return {one,zz};
+}
+function modeForceStrength(name){
+ if(name==='最強優遇')return 1.00;
+ if(name==='強優遇')return .78;
+ if(name==='優遇')return .52;
+ if(name==='通常')return .10;
+ if(name==='ミミズ')return .08;
+ if(name==='冷遇')return .03;
+ return .01;
+}
+function settingForceBoost(s){
+ return [0.55,0.70,0.85,1.00,1.15,1.30][s-1] || 1;
+}
+function suppressionAllowed(s){return s<=2}
+function suppressionStrength(s){return s===1?1.00:(s===2?.55:0)}
+function isOneDigit(g){return g>=1&&g<=9}
+function isZZ(g){return [11,22,33,44,55,66,77,88,99].includes(g)}
+
+function nearestTarget(lastShown,rawG,total,kind){
+ const ds=kind==='one'?[1,2,3,4,5,6,7,8,9]:[11,22,33,44,55,66,77,88,99];
+ const candidates=ds.map(d=>lastShown+d).filter(g=>g>=rawG && g<=total && g-rawG<=15);
+ return candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:null;
+}
+function nearestNeutral(lastShown,rawG,total){
+ for(let shift=0;shift<=15;shift++){
+   const g=rawG+shift,gap=g-lastShown;
+   if(g<=total && !isOneDigit(gap) && !isZZ(gap))return g;
+ }
+ return rawG;
+}
+
+function shapeBonuses(c,raw,hot,total){
+ const theo=theoreticalSpecialRates(c),mult=specialTargetMultiplier[c.s]||1;
+ const targetOne=theo.one*mult,targetZZ=theo.zz*mult;
+ let lastShown=0,oneCount=0,zzCount=0,seen=0;
+ const out=[],used=new Set();
+
+ for(const b of raw){
+   seen++;
+   let g=b.rawG,reason='通常配置',direction='';
+   const rawGap=g-lastShown;
+   const naturalOne=isOneDigit(rawGap),naturalZZ=isZZ(rawGap);
+   const desiredOne=targetOne*seen,desiredZZ=targetZZ*seen;
+
+   // 低設定のみ抑制
+   if(suppressionAllowed(c.s) && naturalOne && oneCount+1>desiredOne){
+     const over=(oneCount+1)-desiredOne;
+     const pSup=Math.min(.85,suppressionStrength(c.s)*Math.min(1,.35+over));
+     if(Math.random()<pSup){
+       const ng=nearestNeutral(lastShown,g,total);
+       if(ng!==g){g=ng;reason='一桁抑制';direction='↓';}
+     }
+   } else if(suppressionAllowed(c.s) && naturalZZ && zzCount+1>desiredZZ){
+     const over=(zzCount+1)-desiredZZ;
+     const pSup=Math.min(.85,suppressionStrength(c.s)*Math.min(1,.35+over));
+     if(Math.random()<pSup){
+       const ng=nearestNeutral(lastShown,g,total);
+       if(ng!==g){g=ng;reason='ゾロ目抑制';direction='↓';}
+     }
+   }
+
+   // 目標不足時は優遇以上＋高設定ほど強制寄せを強める
+   let gapAfter=g-lastShown;
+   if(!isOneDigit(gapAfter) && !isZZ(gapAfter)){
+     const needOne=desiredOne-oneCount,needZZ=desiredZZ-zzCount;
+     if(needOne>0 || needZZ>0){
+       const strength=modeForceStrength(b.micro)*settingForceBoost(c.s);
+       const totalNeed=Math.max(.0001,Math.max(0,needOne)+Math.max(0,needZZ));
+       const chooseOne=Math.random()<Math.max(0,needOne)/totalNeed;
+       const kind=chooseOne?'one':'zz',need=chooseOne?needOne:needZZ;
+       const pForce=Math.min(.85,strength*Math.min(1,.25+need));
+       if(need>0 && Math.random()<pForce){
+         const target=nearestTarget(lastShown,g,total,kind);
+         if(target!==null){
+           g=target;
+           reason=kind==='one'?'強制一桁':'強制ゾロ目';
+           direction='↑';
+         }
+       }
+     }
+   }
+
+   if(g<=lastShown)g=lastShown+1;
+   while(used.has(g)&&g<total)g++;
+   if(g>total)g=b.rawG;
+
+   const finalGap=g-lastShown;
+   if(isOneDigit(finalGap))oneCount++;
+   if(isZZ(finalGap))zzCount++;
+
+   used.add(g);
+   out.push({...b,g,shift:g-b.rawG,reason,direction});
+   lastShown=g;
+ }
+ return out;
+}
+
+
+// ブドウも中区間内の優遇・冷遇モードに連動させる。
+// 8000G固定ではなく、同じ設定でも区間・モードにより変動する。
+const grapeModeNames=['強優遇','優遇','通常','冷遇','強冷遇'];
+
+function grapeModeWeights(c,bonusMicro,isReset){
+ let w=[.10,.20,.40,.20,.10];
+ if(bonusMicro==='最強優遇')w=[.24,.30,.28,.12,.06];
+ else if(bonusMicro==='強優遇')w=[.20,.28,.30,.15,.07];
+ else if(bonusMicro==='優遇')w=[.16,.26,.34,.16,.08];
+ else if(bonusMicro==='通常')w=[.10,.20,.40,.20,.10];
+ else if(bonusMicro==='ミミズ')w=[.08,.18,.43,.22,.09];
+ else if(bonusMicro==='冷遇')w=[.06,.14,.32,.30,.18];
+ else if(bonusMicro==='超冷遇')w=[.04,.10,.26,.34,.26];
+
+ if(isReset){
+   w[0]*=1.15;w[1]*=1.10;w[3]*=.92;w[4]*=.88;
+ }
+ return norm(w);
+}
+
+function grapeDen(c,grapeMode,isReset){
+ const baseByMachine={
+   girls:{1:5.980,2:5.980,3:5.980,4:5.980,5:5.883,6:5.831},
+   gogo:{1:6.287,2:6.210,3:6.176,4:6.074,5:5.995,6:5.910},
+   funky:{1:5.942,2:5.932,3:5.878,4:5.831,5:5.749,6:5.659},
+   im:{1:6.01,2:6.01,3:6.01,4:6.01,5:6.01,6:5.80}
+ };
+ let den=(baseByMachine[c.key]&&baseByMachine[c.key][c.s]) || 6.00;
+
+ if(grapeMode==='強優遇')den-=0.55;
+ else if(grapeMode==='優遇')den-=0.28;
+ else if(grapeMode==='通常')den+=0.00;
+ else if(grapeMode==='冷遇')den+=0.34;
+ else if(grapeMode==='強冷遇')den+=0.68;
+
+ if(isReset)den-=0.05;
+ return Math.max(5.20,Math.min(7.30,den));
+}
+
+
+// 65,535G 長期ボーナスプール方式
+// 1日8,000Gごとに総量を固定せず、65,535Gの長期系列でBIG/REG総量を管理。
+// ランダム開始位置は「その時点のBIG/REG残在庫」を決めるためだけに使用する。
+// 中区間・優遇冷遇・BR比率などのモード状態は引き継がず、表示0Gでは必ずリセット中区間から開始。
+// したがって8,000G終盤でボーナスを無理に消化せず、リセットモードとも両立する。
+const LONG_POOL_GAMES=65535;
+
+function randNormal(){
+ let u=0,v=0;
+ while(u===0)u=Math.random();
+ while(v===0)v=Math.random();
+ return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function approxBinomial(n,p){
+ if(n<=0||p<=0)return 0;
+ if(p>=1)return n;
+ // nが小さい時は厳密ベルヌーイ、大きい時は正規近似
+ if(n<=500){
+   let x=0;
+   for(let i=0;i<n;i++)if(Math.random()<p)x++;
+   return x;
+ }
+ const mean=n*p,sd=Math.sqrt(n*p*(1-p));
+ return clamp(Math.round(mean+sd*randNormal()),0,n);
+}
+
+function makeBonusPool(c,visibleGames){
+ const poolGames=Math.max(LONG_POOL_GAMES,visibleGames);
+
+ // BIG/REGは公表確率を基準に65,535G総量を生成。
+ // 日単位ではなく長期総量だけを理論値へ寄せる。
+ const pB=1/c.bb,pR=1/c.rb;
+ const meanB=poolGames*pB,meanR=poolGames*pR;
+ const sdB=Math.sqrt(poolGames*pB*(1-pB));
+ const sdR=Math.sqrt(poolGames*pR*(1-pR));
+ const targetBB=clamp(Math.round(meanB+sdB*randNormal()),0,poolGames);
+ const targetRB=clamp(Math.round(meanR+sdR*randNormal()),0,poolGames-targetBB);
+
+ // 8,000Gは長期系列の任意区間を観測。
+ const maxStart=Math.max(0,poolGames-visibleGames);
+ const inventoryStart=rnd(0,maxStart);
+
+ // 開始位置より前に消化済みのBIG/REGだけを近似生成。
+ // ここから引き継ぐのは「残在庫」のみ。モード状態は一切引き継がない。
+ const fracBefore=inventoryStart/poolGames;
+ const usedBBBefore=approxBinomial(targetBB,fracBefore);
+ const usedRBBefore=approxBinomial(targetRB,fracBefore);
+
+ return{
+   poolGames,targetBB,targetRB,
+   inventoryStart,
+   remBB:Math.max(0,targetBB-usedBBBefore),
+   remRB:Math.max(0,targetRB-usedRBBefore),
+   usedBBBefore,usedRBBefore
+ };
+}
+
+function placementBalanceFactors(isReset,bbBal,rbBal){
+ let bbFactor=1,rbFactor=1;
+ if(isReset){bbFactor*=.92;rbFactor*=1.18}
+ else{
+   bbFactor*=clamp(1-bbBal*.055,.58,1.18);
+   rbFactor*=clamp(1-rbBal*.060,.52,1.18);
+   if(bbBal<0)bbFactor*=clamp(1+(-bbBal)*.030,1,1.22);
+   if(rbBal<0)rbFactor*=clamp(1+(-rbBal)*.032,1,1.24);
+ }
+ return {bbFactor,rbFactor};
+}
+
+function poolPlacementProb(c,mo,share,remBB,remRB,remPoolGames,isReset,bbBal,rbBal){
+ if(remPoolGames<=0)return {pB:0,pR:0};
+
+ const remTotal=remBB+remRB;
+ if(remTotal<=0)return {pB:0,pR:0};
+
+ // 長期プールの最終端だけは残数を使い切る。
+ // 通常の8,000G観測窓ではここに到達しないため帳尻合わせは起きない。
+ if(remPoolGames<=remTotal){
+   const pB=remBB/remTotal;
+   return {pB,pR:1-pB};
+ }
+
+ const pubComb=1/((1/c.bb)+(1/c.rb));
+ const pubBigShare=(1/c.bb)/((1/c.bb)+(1/c.rb));
+
+ // 中区間・優遇冷遇は「配置密度」を変える。
+ const intensity=clamp(pubComb/mo.den,.20,3.60);
+
+ // BR比率モードはBIG/REGの前倒し比率だけを変える。
+ const bigBias=clamp(share/pubBigShare,.45,1.90);
+ const regBias=clamp((1-share)/(1-pubBigShare),.45,1.90);
+
+ let pB=(remBB/remPoolGames)*intensity*bigBias;
+ let pR=(remRB/remPoolGames)*intensity*regBias;
+ const bal=placementBalanceFactors(isReset,bbBal,rbBal);
+ pB*=bal.bbFactor;
+ pR*=bal.rbFactor;
+
+ // 長期プールの残り密度に応じて軽く補正するが、8,000G単位では帳尻を合わせない。
+ const standardRemaining=remPoolGames/pubComb;
+ const paceBoost=clamp(remTotal/Math.max(1,standardRemaining),.72,1.55);
+ pB*=paceBoost;
+ pR*=paceBoost;
+
+ const sum=pB+pR;
+ if(sum>.82){
+   const k=.82/sum;
+   pB*=k;pR*=k;
+ }
+ return {pB,pR};
+}
+
+function simulate(c,total){
+ let g=0,coins=0,bb=0,rb=0,grapeCount=0,microBlockSeq=0,resetDelta=0,resetPeak=0,peakDownLeft=0,bbAdvanceBalance=0,rbAdvanceBalance=0;
+ const pool=makeBonusPool(c,total);
+ let remBB=pool.remBB,remRB=pool.remRB;
+
+ // 長期プールから引き継ぐのはBIG/REG残在庫だけ。
+ // 当日側の中区間・BR比率・優遇冷遇・ブドウモードは必ず初期化し、
+ // 0Gからリセット中区間として新規スタートする。
+ const dayModeState='RESET';
+ const rawLog=[0],rawBonuses=[],macroHist=[],macroBounds=[];
+ const hot=rnd(100,200);
+ let macroNo=0;
+
+ while(g<total){
+   macroNo++;
+   const isMorning=(dayModeState==='RESET' && macroNo===1); // 0Gは必ずリセット中区間
+   const isPostReset=macroNo===2;                         // 次1区間だけ専用移行
+   const startG=g,startCoins=coins,startBB=bb,startRB=rb;
+
+   let mi=pick(macroW(c,g,coins,isMorning,isPostReset,resetDelta,resetPeak,peakDownLeft));
+
+   // V16: プラス系中区間は低設定ほど短くする。
+   // 選択率そのものを過度に削らず「良い区間は存在するが低設定ほど伸びにくい」を表現。
+   function macroLengthRange(c,mi,isMorning){
+     if(isMorning)return [1000,3000]; // リセットはV15維持
+     if(mi===0){ // 強プラス
+       const ranges={1:[600,1400],2:[650,1550],3:[700,1750],4:[850,2150],5:[900,2350],6:[1000,2600]};
+       return ranges[c.s];
+     }
+     if(mi===1){ // プラス
+       const ranges={1:[650,1600],2:[700,1750],3:[750,1950],4:[900,2300],5:[950,2500],6:[1000,2700]};
+       return ranges[c.s];
+     }
+     if(mi===2){ // 微プラス
+       const ranges={1:[800,1900],2:[850,2050],3:[900,2200],4:[1000,2500],5:[1000,2700],6:[1000,2850]};
+       return ranges[c.s];
+     }
+     return [1000,3000];
+   }
+   const lr=macroLengthRange(c,mi,isMorning);
+   let len=Math.min(rnd(lr[0],lr[1]),total-g),endG=g+len;
+   let macroLabel=macroNames[mi];
+   let isRebound=false,reboundRatio=null,reboundBand=null,targetDelta;
+
+   if(!isMorning && coins<=-1000 && Math.random()<reboundTriggerProb(c,coins)){
+     isRebound=true;
+     reboundBand=negativeBand(coins);
+     reboundRatio=chooseReboundRatio(c);
+     targetDelta=Math.round(Math.abs(coins)*reboundRatio);
+     mi=reboundMicroIndex(reboundRatio);
+     macroLabel='盛り返し'+Math.round(reboundRatio*100)+'%';
+   }else{
+     const tr=targetRange(c,mi,isMorning);
+     targetDelta=rnd(tr[0],tr[1]);
+   }
+
+   // 盛り返しでシナリオ種別が変わった場合も、その最終シナリオに対応した区間長を使う。
+   if(isRebound){
+     const rr=macroLengthRange(c,mi,isMorning);
+     len=Math.min(rnd(rr[0],rr[1]),total-g);
+     endG=g+len;
+   }
+   const tw=typeW(c,isMorning);
+
+   while(g<endG){
+     const progress=(g-startG)/Math.max(1,len);
+     const mic=pick(microW(mi,coins-startCoins,targetDelta,progress)),mo=micro[mic];
+     microBlockSeq++;
+     const currentMicroBlockId=microBlockSeq;
+     const gm=pick(grapeModeWeights(c,mo.name,isMorning));
+     const grapeMode=grapeModeNames[gm];
+     const gdBlock=grapeDen(c,grapeMode,isMorning);
+     const ti=pick(tw),share=bonusShare(c,ti,isMorning);
+     const block=Math.min(250,endG-g);
+     for(let i=0;i<block;i++){
+       g++;coins-=3;let hit=null;
+       const remPoolGames=pool.poolGames-(pool.inventoryStart+g)+1;
+       const probs=poolPlacementProb(c,mo,share,remBB,remRB,remPoolGames,isMorning,bbAdvanceBalance,rbAdvanceBalance);
+       const z=Math.random();
+       if(remBB>0 && z<probs.pB){
+         bb++;remBB--;coins+=240;hit='BB';
+       }
+       else if(remRB>0 && z<probs.pB+probs.pR){
+         rb++;remRB--;coins+=96;hit='RB';
+       }
+       bbAdvanceBalance += (hit==='BB'?1:0) - (1/c.bb);
+       rbAdvanceBalance += (hit==='RB'?1:0) - (1/c.rb);
+       if(!hit){
+         const gd=gdBlock;
+         if(Math.random()<1/gd){coins+=8;grapeCount++;}
+         if(Math.random()<1/7.3)coins+=3;
+         if(Math.random()<1/35)coins+=2;
+       }
+       rawLog[g]=coins;
+       if(isMorning && coins>resetPeak)resetPeak=coins;
+       if(hit){
+         rawBonuses.push({
+           no:rawBonuses.length+1,rawG:g,type:hit,payout:hit==='BB'?240:96,
+           macro:macroLabel,micro:mo.name,microBlockId:currentMicroBlockId,isMorning,
+           grapeMode,grapeDenBlock:gdBlock,bbAdvanceBalance,rbAdvanceBalance,
+           brType:['B型','BR型','R型'][ti],flag:flagLabel(hit,isMorning,c)
+         });
+       }
+     }
+   }
+
+   const segBB=bb-startBB,segRB=rb-startRB,segHits=segBB+segRB,segLen=g-startG;
+   const segDelta=coins-startCoins;
+   if(isMorning){
+     resetDelta=segDelta;
+     if(c.s<=3 && resetPeak>=800)peakDownLeft=2;
+   }else if(peakDownLeft>0){
+     peakDownLeft--;
+   }
+   macroBounds.push(g);
+   macroHist.push({
+     no:macroNo,isMorning,isPostReset,start:startG+1,end:g,len:segLen,name:macroLabel,
+     targetDelta,bb:segBB,rb:segRB,
+     bbRate:segBB?segLen/segBB:null,rbRate:segRB?segLen/segRB:null,combRate:segHits?segLen/segHits:null,
+     delta:segDelta,endCoins:coins,
+     transitionState:isPostReset?postResetState(resetDelta):'',resetPeak:isMorning?resetPeak:null,peakDownActive:(!isMorning&&resetPeak>=800&&c.s<=3&&peakDownLeft>=0),isRebound,reboundRatio,reboundBand
+   });
+ }
+
+ // ボーナスを除いた小役・投入ログ
+ const baseDelta=new Array(total+1).fill(0);
+ for(let x=1;x<=total;x++)baseDelta[x]=rawLog[x]-rawLog[x-1];
+ for(const b of rawBonuses)baseDelta[b.rawG]-=b.payout;
+
+ // 特殊Gへ表示位置だけ移す。総BON・最終差枚は不変
+ const bonuses=shapeBonuses(c,rawBonuses,hot,total);
+ const payoutAt=new Array(total+1).fill(0);
+ for(const b of bonuses)payoutAt[b.g]+=b.payout;
+ const log=[0];
+ for(let x=1;x<=total;x++)log[x]=log[x-1]+baseDelta[x]+payoutAt[x];
+
+ let last=0;
+ for(const b of bonuses){
+   b.interval=b.g-last;b.coins=log[b.g];
+   const from=Math.max(0,b.g-1000);b.recent=log[b.g]-log[from];last=b.g;
+ }
+ const finalCoins=log[total];
+ const spTheo=theoreticalSpecialRates(c);
+ const spMult=specialTargetMultiplier[c.s]||1;
+ const oneActual=bonuses.length?bonuses.filter((b,i)=>isOneDigit(b.interval)).length/bonuses.length:0;
+ const zzActual=bonuses.length?bonuses.filter((b,i)=>isZZ(b.interval)).length/bonuses.length:0;
+ return{
+   bb,rb,targetBB:pool.targetBB,targetRB:pool.targetRB,poolGames:pool.poolGames,poolInventoryStart:pool.inventoryStart,bbAdvanceBalance,rbAdvanceBalance,grapeCount,grapeDenActual:grapeCount?total/grapeCount:null,coins:finalCoins,rtp:(3*total+finalCoins)/(3*total)*100,total,log,bonuses,
+   macroHist,macroBounds,hot,
+   morningSpecific:bonuses.filter(b=>b.isMorning && b.flag.includes('設定差')).length,
+   resetPeak,
+   specialMultiplier:spMult,
+   oneTheo:spTheo.one,zzTheo:spTheo.zz,
+   oneActual,zzActual
+ };
+}
+
+function draw(r){
+ const cvs=document.getElementById('chart'),ctx=cvs.getContext('2d'),W=cvs.width,H=cvs.height,L=60,R=20,T=18,B=35;
+ ctx.clearRect(0,0,W,H);
+ let mn=Math.min(0,...r.log),mx=Math.max(0,...r.log),pad=Math.max(300,(mx-mn)*.10);
+ mn=Math.floor((mn-pad)/500)*500;mx=Math.ceil((mx+pad)/500)*500;if(mx===mn){mx+=500;mn-=500}
+ const x=g=>L+g/r.total*(W-L-R),y=v=>T+(mx-v)/(mx-mn)*(H-T-B);
+ ctx.font='12px sans-serif';ctx.fillStyle='#666';ctx.strokeStyle='#ddd';
+ for(let i=0;i<=4;i++){const val=mx-(mx-mn)*i/4,yy=y(val);ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(W-R,yy);ctx.stroke();ctx.fillText(Math.round(val),6,yy+4)}
+ ctx.strokeStyle='#999';ctx.beginPath();ctx.moveTo(L,y(0));ctx.lineTo(W-R,y(0));ctx.stroke();
+ ctx.setLineDash([6,5]);ctx.strokeStyle='#888';for(const g of r.macroBounds.slice(0,-1)){ctx.beginPath();ctx.moveTo(x(g),T);ctx.lineTo(x(g),H-B);ctx.stroke()}ctx.setLineDash([]);
+ ctx.strokeStyle='#2366cc';ctx.lineWidth=2;ctx.beginPath();
+ for(let g=0;g<=r.total;g++){const xx=x(g),yy=y(r.log[g]);if(g===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy)}ctx.stroke();
+ ctx.fillStyle='#111';ctx.font='bold 13px sans-serif';ctx.fillText((r.coins>=0?'+':'')+r.coins+'枚',W-100,Math.max(18,y(r.coins)-8));
+}
+
+let results=[];
+function rateTable(el,src,c,withSubtotal){
+ let h='<thead><tr><th>設定</th><th>強プラス</th><th>プラス</th><th>微プラス</th>';
+ if(withSubtotal)h+='<th>微プラス以上</th>';
+ h+='<th>均衡</th><th>微マイナス</th><th>マイナス</th></tr></thead><tbody>';
+ for(let s=1;s<=6;s++){
+   const w=src[c.key][s];
+   h+=`<tr><td>設定${s}</td><td>${(w[0]*100).toFixed(1)}%</td><td>${(w[1]*100).toFixed(1)}%</td><td>${(w[2]*100).toFixed(1)}%</td>`;
+   if(withSubtotal)h+=`<td><strong>${((w[0]+w[1]+w[2])*100).toFixed(1)}%</strong></td>`;
+   h+=`<td>${(w[3]*100).toFixed(1)}%</td><td>${(w[4]*100).toFixed(1)}%</td><td>${(w[5]*100).toFixed(1)}%</td></tr>`;
+ }
+ document.getElementById(el).innerHTML=h+'</tbody>';
+}
+function renderTables(c){
+ rateTable('morningRate',morning,c,true);
+ rateTable('normalRate',normal,c,true);
+ const typeRows=[1,2,3,4,5,6].map(s=>{
+   const tw=morningType[c.key][s];
+   return `<tr><td>設定${s}</td><td>${(tw[0]*100).toFixed(1)}%</td><td>${(tw[1]*100).toFixed(1)}%</td><td><strong>${(tw[2]*100).toFixed(1)}%</strong></td><td>${((tw[1]+tw[2])*100).toFixed(1)}%</td></tr>`;
+ }).join('');
+ document.getElementById('typeRate').innerHTML=
+ `<thead><tr><th>設定</th><th>B型</th><th>BR型</th><th>R型</th><th>BR/R型小計</th></tr></thead><tbody>${typeRows}</tbody>`;
+
+ const states=[['上振れ後','high'],['中立後','neutral'],['不発後','low']];
+ document.getElementById('postResetRate').innerHTML=
+ `<thead><tr><th>状態</th><th>強プラス</th><th>プラス</th><th>微プラス</th><th>微プラス以上</th><th>均衡</th><th>微マイナス</th><th>マイナス</th></tr></thead><tbody>`+
+ states.map(([label,key])=>{
+   const w=postResetTransition[c.key][key][c.s];
+   return `<tr><td>${label}</td><td>${(w[0]*100).toFixed(1)}%</td><td>${(w[1]*100).toFixed(1)}%</td><td>${(w[2]*100).toFixed(1)}%</td><td><strong>${((w[0]+w[1]+w[2])*100).toFixed(1)}%</strong></td><td>${(w[3]*100).toFixed(1)}%</td><td>${(w[4]*100).toFixed(1)}%</td><td>${(w[5]*100).toFixed(1)}%</td></tr>`;
+ }).join('')+`</tbody>`;
+
+ const reboundRows=[1,2,3,4,5,6].map(s=>{
+   const rw=reboundRatioWeights[s];
+   return `<tr><td>設定${s}</td><td>${(reboundTriggerBySetting[s]*100).toFixed(0)}%</td><td>${(rw[0]*100).toFixed(0)}%</td><td>${(rw[1]*100).toFixed(0)}%</td><td>${(rw[2]*100).toFixed(0)}%</td><td>${(rw[3]*100).toFixed(0)}%</td></tr>`;
+ }).join('');
+ document.getElementById('reboundRateTable').innerHTML=
+ `<thead><tr><th>設定</th><th>基本トリガー率</th><th>60%戻し</th><th>80%戻し</th><th>100%戻し</th><th>120%戻し</th></tr></thead><tbody>${reboundRows}</tbody>`;
+ const grapeModes=['強優遇','優遇','通常','冷遇','強冷遇'];
+ const grapeRows=[1,2,3,4,5,6].map(s=>{
+   const cc={s:s,key:c.key};
+   const vals=grapeModes.map(m=>'1/'+grapeDen(cc,m,false).toFixed(2));
+   return `<tr><td>設定${s}</td>${vals.map(v=>`<td>${v}</td>`).join('')}</tr>`;
+ }).join('');
+ document.getElementById('grapeModeTable').innerHTML=
+ `<thead><tr><th>設定</th>${grapeModes.map(m=>`<th>${m}</th>`).join('')}</tr></thead><tbody>${grapeRows}</tbody>`;
+
+}
+function setCard(el,r,i){
+ const h=r.bb+r.rb;
+ el.innerHTML=`<div class="kpi"><div class="small">セット</div><div class="big">${i+1}</div></div>
+ <div class="kpi"><div class="small">差枚</div><div class="big">${r.coins>=0?'+':''}${r.coins}</div></div>
+ <div class="kpi"><div class="small">BIG/REG</div><div class="big">${r.bb}/${r.rb}</div></div>
+ <div class="kpi"><div class="small">合算</div><div class="big">${h?'1/'+(r.total/h).toFixed(1):'-'}</div></div>`;
+}
+function show(i){
+ const r=results[i],h=r.bb+r.rb;draw(r);
+ document.getElementById('graphInfo').textContent=`セット${i+1}｜最終 ${(r.coins>=0?'+':'')+r.coins}枚｜当日特定ゾーン ${r.hot}G前後`;
+ document.getElementById('graphCheck').textContent=`整合 graph end=${r.log[r.total]} / result=${r.coins}`;
+ document.getElementById('sBB').textContent=r.bb;document.getElementById('sRB').textContent=r.rb;
+ document.getElementById('sComb').textContent=h?'1/'+(r.total/h).toFixed(1):'-';
+ document.getElementById('sPool').textContent='BIG '+r.targetBB+' / REG '+r.targetRB+'｜在庫位置 '+r.poolInventoryStart+'G';
+ document.getElementById('sBBBalance').textContent=(r.bbAdvanceBalance>=0?'+':'')+r.bbAdvanceBalance.toFixed(2);
+ document.getElementById('sRBBalance').textContent=(r.rbAdvanceBalance>=0?'+':'')+r.rbAdvanceBalance.toFixed(2);
+ document.getElementById('sCoins').textContent=(r.coins>=0?'+':'')+r.coins;
+ document.getElementById('sRtp').textContent=r.rtp.toFixed(2)+'%';
+ document.getElementById('sGrape').textContent=r.grapeDenActual?'1/'+r.grapeDenActual.toFixed(2):'-';
+ document.getElementById('sGrapeRatio').textContent=r.grapeDenActual?'×'+(grapeTheoryDen(cfg())/r.grapeDenActual).toFixed(2):'-';
+ document.getElementById('sMorningSpec').textContent=r.morningSpecific+'回';
+ document.getElementById('sResetPeak').textContent=(r.resetPeak>=0?'+':'')+Math.round(r.resetPeak)+'枚';
+ document.getElementById('sSpecialMult').textContent='×'+r.specialMultiplier.toFixed(2);
+ const oneActualCount=r.oneActual*r.bonuses.length;
+ const oneTheoCount=r.oneTheo*r.bonuses.length;
+ const zzActualCount=r.zzActual*r.bonuses.length;
+ const zzTheoCount=r.zzTheo*r.bonuses.length;
+ const oneRatio=oneTheoCount>0?oneActualCount/oneTheoCount:0;
+ const zzRatio=zzTheoCount>0?zzActualCount/zzTheoCount:0;
+ document.getElementById('sOneRate').textContent=oneActualCount.toFixed(2)+'回 / '+oneTheoCount.toFixed(2)+'回 / ×'+oneRatio.toFixed(2);
+ document.getElementById('sZZRate').textContent=zzActualCount.toFixed(2)+'回 / '+zzTheoCount.toFixed(2)+'回 / ×'+zzRatio.toFixed(2);
+
+ let prevMicroBlockId=null;
+ const bonusRows=r.bonuses.map(b=>{
+   const sameBlock=(prevMicroBlockId===b.microBlockId);
+   const modeText=sameBlock?'〃':b.micro;
+   const modeClass=sameBlock?'mode-repeat':'';
+   prevMicroBlockId=b.microBlockId;
+   const typeBadge=b.type==='BB'
+      ?'<span class="badge-big">BIG</span>'
+      :'<span class="badge-reg">REG</span>';
+   const reasonBadge=b.reason==='通常配置'?b.reason:`<span class="badge-special">${b.reason}</span>`;
+   const arrow=b.direction?` <strong>${b.direction}</strong>`:'';
+   return `<tr>
+     <td>${b.no}</td>
+     <td>${b.rawG}</td>
+     <td><strong>${b.g}${arrow}</strong></td>
+     <td>${b.interval}</td>
+     <td>${typeBadge}</td>
+     <td>${b.flag}</td>
+     <td>${b.isMorning?'<strong>リセット</strong>':b.macro}</td>
+     <td>${b.brType}</td>
+     <td class="${modeClass}">${modeText}</td>
+     <td>${b.grapeMode||'—'}</td>
+     <td>${b.grapeDenBlock?'1/'+b.grapeDenBlock.toFixed(2):'—'}</td>
+     <td>${b.bbAdvanceBalance!==undefined?(b.bbAdvanceBalance>=0?'+':'')+b.bbAdvanceBalance.toFixed(2):'—'}</td>
+     <td>${b.rbAdvanceBalance!==undefined?(b.rbAdvanceBalance>=0?'+':'')+b.rbAdvanceBalance.toFixed(2):'—'}</td>
+     <td>${reasonBadge}</td>
+     <td>${b.coins>=0?'+':''}${b.coins}</td>
+   </tr>`;
+ }).join('');
+ document.getElementById('bonusTable').innerHTML=
+ `<thead><tr><th>#</th><th>内部当選G</th><th>ペカG</th><th>ペカ間</th><th>種類</th><th>フラグ内訳</th><th>中区間</th><th>BR比率モード</th><th>ボーナスモード</th><th>ブドウモード</th><th>ブドウ確率</th><th>BIG残高</th><th>REG残高</th><th>配置理由</th><th>差枚</th></tr></thead><tbody>${bonusRows}</tbody>`;
+
+ document.getElementById('macroTable').innerHTML=
+ `<thead><tr><th>#</th><th>区分</th><th>移行判定</th><th>差枚レンジ</th><th>G区間</th><th>シナリオ</th><th>目標差枚</th><th>BIG</th><th>REG</th><th>BB率</th><th>RB率</th><th>合算</th><th>実区間差枚</th><th>終了差枚</th></tr></thead><tbody>`+
+ r.macroHist.map(m=>`<tr><td>${m.no}</td><td>${m.isMorning?'<strong>リセット</strong>':(m.isPostReset?'<strong>リセット後専用</strong>':'通常')}</td><td>${m.isPostReset?(m.transitionState==='high'?'上振れ後':(m.transitionState==='low'?'不発後':'中立後')):'—'}</td><td>${m.isRebound?'−'+m.reboundBand+'帯':'—'}</td><td>${m.start}-${m.end}</td><td>${m.name}</td><td>${m.targetDelta>=0?'+':''}${m.targetDelta}</td><td>${m.bb}</td><td>${m.rb}</td><td>${m.bbRate?'1/'+m.bbRate.toFixed(1):'—'}</td><td>${m.rbRate?'1/'+m.rbRate.toFixed(1):'—'}</td><td><strong>${m.combRate?'1/'+m.combRate.toFixed(1):'—'}</strong></td><td>${m.delta>=0?'+':''}${m.delta}</td><td>${m.endCoins>=0?'+':''}${m.endCoins}</td></tr>`).join('')+
+ `</tbody>`;
+}
+function dist(){
+ const bins=[['+7000以上',v=>v>=7000],['+5000-6999',v=>v>=5000&&v<7000],['+4000-4999',v=>v>=4000&&v<5000],['+3000-3999',v=>v>=3000&&v<4000],['+2000-2999',v=>v>=2000&&v<3000],['+1000-1999',v=>v>=1000&&v<2000],['+1-999',v=>v>0&&v<1000],['0~-999',v=>v<=0&&v>-1000],['-1000~-1999',v=>v<=-1000&&v>-2000],['-2000以下',v=>v<=-2000]];
+ document.getElementById('distTable').innerHTML='<thead><tr><th>差枚帯</th><th>回数</th><th>占有率</th></tr></thead><tbody>'+
+ bins.map(([l,f])=>{const n=results.filter(r=>f(r.coins)).length;return `<tr><td>${l}</td><td>${n}</td><td>${(n/results.length*100).toFixed(1)}%</td></tr>`}).join('')+'</tbody>';
+}
+function run(){
+ const c=cfg();
+ const games=clamp(Math.round((+document.getElementById('games').value||8000)/250)*250,1000,65536);
+ const sets=clamp(+document.getElementById('sets').value||100,1,500);
+
+ results=Array.from({length:sets},()=>simulate(c,games));
+
+ // 公表値
+ const pubComb=1/(1/c.bb+1/c.rb);
+ const expCoins=(c.rtp/100-1)*3*games;
+ document.getElementById('pubBB').textContent='1/'+c.bb;
+ document.getElementById('pubRB').textContent='1/'+c.rb;
+ document.getElementById('pubComb').textContent='1/'+pubComb.toFixed(1);
+ document.getElementById('pubRtp').textContent=c.rtp.toFixed(1)+'%';
+ document.getElementById('pubGrape').textContent='1/'+grapeTheoryDen(c).toFixed(2);
+ document.getElementById('expectedCoins').textContent=(expCoins>=0?'+':'')+Math.round(expCoins)+'枚';
+
+ // 全セットを一本化して集計
+ const totalGames=games*sets;
+ const totalBB=results.reduce((a,r)=>a+r.bb,0);
+ const totalRB=results.reduce((a,r)=>a+r.rb,0);
+ const totalBonus=totalBB+totalRB;
+ const totalCoins=results.reduce((a,r)=>a+r.coins,0);
+ const totalGrapes=results.reduce((a,r)=>a+r.grapeCount,0);
+
+ const avgBBCount=totalBB/sets;
+ const avgRBCount=totalRB/sets;
+ const avgCoins=totalCoins/sets;
+
+ // 確率は「トータルゲーム数 ÷ トータル回数」
+ const bbDen=totalBB ? totalGames/totalBB : null;
+ const rbDen=totalRB ? totalGames/totalRB : null;
+ const combDen=totalBonus ? totalGames/totalBonus : null;
+
+ // 機械割も全セット総差枚から一本化
+ const avgRtp=(3*totalGames+totalCoins)/(3*totalGames)*100;
+
+ document.getElementById('avgBB').textContent=
+   bbDen?'1/'+bbDen.toFixed(1):'-';
+ document.getElementById('avgRB').textContent=
+   rbDen?'1/'+rbDen.toFixed(1):'-';
+ document.getElementById('avgComb').textContent=
+   combDen?'1/'+combDen.toFixed(1):'-';
+ document.getElementById('avgRtp').textContent=avgRtp.toFixed(2)+'%';
+ document.getElementById('avgGrape').textContent=totalGrapes?'1/'+(totalGames/totalGrapes).toFixed(2):'-';
+ document.getElementById('avgCoins').textContent=(avgCoins>=0?'+':'')+Math.round(avgCoins)+'枚';
+ const avgMacroCount=results.reduce((a,r)=>a+r.macroHist.length,0)/sets;
+ document.getElementById('avgMacroCount').textContent=avgMacroCount.toFixed(2)+'個';
+
+ let maxi=0,mini=0;
+ for(let i=1;i<results.length;i++){
+   if(results[i].coins>results[maxi].coins)maxi=i;
+   if(results[i].coins<results[mini].coins)mini=i;
+ }
+ setCard(document.getElementById('maxSet'),results[maxi],maxi);
+ setCard(document.getElementById('minSet'),results[mini],mini);
+
+ document.getElementById('view').innerHTML=
+   results.map((_,i)=>`<option value="${i}">セット${i+1}</option>`).join('');
+
+ renderTables(c);
+ dist();
+ show(0);
+}
+document.getElementById('run').onclick=run;
+document.getElementById('view').onchange=e=>show(+e.target.value);
+document.getElementById('machine').onchange=()=>renderTables(cfg());
+document.getElementById('setting').onchange=()=>renderTables(cfg());
+run();
+</script>
+</body>
+</html>
